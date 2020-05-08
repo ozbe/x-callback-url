@@ -13,16 +13,10 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Mutex;
 use std::sync::{mpsc, Once};
 
-const CALLBACK_SCHEME: &str = "callback";
-const CALLBACK_SOURCE: &str = "callback";
 const CALLBACK_ACTION_SUCCESS: &str = "success";
 const CALLBACK_ACTION_ERROR: &str = "error";
 const CALLBACK_ACTION_CANCEL: &str = "cancel";
 const CALLBACK_PARAM_KEY_CALLBACK_ID: &str = "callback_id";
-
-lazy_static! {
-    static ref CALLBACK_URL_BASE: XCallbackUrl = XCallbackUrl::new(CALLBACK_SCHEME);
-}
 
 lazy_static! {
     static ref SENDERS: Mutex<HashMap<String, Sender<XCallbackUrl>>> = Mutex::new(HashMap::new());
@@ -41,16 +35,20 @@ pub fn terminate_app() {
 }
 
 pub struct NSXCallbackClient {
+    source: String,
+    source_scheme: String,
     callback_id: String,
     receiver: Receiver<XCallbackUrl>,
 }
 
 impl NSXCallbackClient {
-    pub fn new() -> NSXCallbackClient {
+    pub fn new<U: ToString, T: ToString>(source: U, source_scheme: T) -> NSXCallbackClient {
         let callback_id = NSXCallbackClient::generate_callback_id();
         let (sender, receiver) = mpsc::channel();
         NSXCallbackClient::store_sender(&callback_id, sender);
         NSXCallbackClient {
+            source: source.to_string(),
+            source_scheme: source_scheme.to_string(),
             callback_id,
             receiver,
         }
@@ -67,38 +65,36 @@ impl NSXCallbackClient {
             .insert(callback_id.to_string(), sender);
     }
 
-    fn generate_callback_url(&self, url: &XCallbackUrl) -> XCallbackUrl {
-        fn generate_callback_url(action: &str, callback_id: &str) -> String {
-            let mut url = CALLBACK_URL_BASE.clone();
+    fn generate_callback_url(&self, base_url: &XCallbackUrl) -> XCallbackUrl {
+        fn generate_callback_url(source_scheme: &str, action: &str, callback_id: &str) -> String {
+            let mut url = XCallbackUrl::new(source_scheme);
             url.set_action(action);
             url.action_params_mut()
                 .push(CALLBACK_PARAM_KEY_CALLBACK_ID, callback_id);
             url.to_string()
         }
 
-        let mut callback_url = url.clone();
-        callback_url
-            .callback_params_mut()
-            .set_source(Some(CALLBACK_SOURCE));
-        callback_url
-            .callback_params_mut()
+        let mut url = base_url.clone();
+        url.callback_params_mut().set_source(Some(&self.source));
+        url.callback_params_mut()
             .set_success(Some(generate_callback_url(
+                &self.source_scheme,
                 CALLBACK_ACTION_SUCCESS,
                 &self.callback_id,
             )));
-        callback_url
-            .callback_params_mut()
+        url.callback_params_mut()
             .set_error(Some(generate_callback_url(
+                &self.source_scheme,
                 CALLBACK_ACTION_ERROR,
                 &self.callback_id,
             )));
-        callback_url
-            .callback_params_mut()
+        url.callback_params_mut()
             .set_cancel(Some(generate_callback_url(
+                &self.source_scheme,
                 CALLBACK_ACTION_CANCEL,
                 &self.callback_id,
             )));
-        callback_url
+        url
     }
 
     fn wait_for_response(&self) -> Result<XCallbackResponse, Box<dyn Error>> {
@@ -126,12 +122,6 @@ impl NSXCallbackClient {
             status,
             action_params,
         })
-    }
-}
-
-impl Default for NSXCallbackClient {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
