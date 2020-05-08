@@ -1,5 +1,5 @@
 [package]
-name = "callback"
+name = "x-callback-url"
 version = "0.1.0"
 authors = ["ozbe <1372945+ozbe@users.noreply.github.com>"]
 edition = "2018"
@@ -9,5 +9,4 @@ lazy_static = "1.4.0"
 macos = { git = "https://github.com/ozbe/webkitten", branch = "x-callback-url" }
 objc = "0.2.7"
 rand = "0.7.3"
-structopt = "0.3.14"
 url = "2.1.1"
