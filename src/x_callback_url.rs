@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::iter::FromIterator;
 use url::Url;
 
-const CALLBACK_HOST: &str = "x-callback-url";
+pub const CALLBACK_HOST: &str = "x-callback-url";
 pub const CALLBACK_PARAM_KEY_SOURCE: &str = "x-source";
 pub const CALLBACK_PARAM_KEY_SUCCESS: &str = "x-success";
 pub const CALLBACK_PARAM_KEY_ERROR: &str = "x-error";
